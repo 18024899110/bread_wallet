@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  wallet-api:
+    image: waltid/wallet-api:latest
+    pull_policy: always
+    ports:
+      - "7001:7001"
+    volumes:
+      - ./waltid-config/wallet:/waltid-wallet-api/config
+      - wallet-data:/waltid-wallet-api/data
+
+volumes:
+  wallet-data:

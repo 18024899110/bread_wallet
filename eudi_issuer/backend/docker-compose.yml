@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  waltid-issuer:
+    image: waltid/issuer-api:latest
+    pull_policy: always
+    ports:
+      - "7002:7002"
+    volumes:
+      - ./waltid-config/issuer:/waltid-issuer-api/config

@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  waltid-issuer:
+    image: waltid/issuer-api:latest
+    pull_policy: missing
+    restart: unless-stopped
+    ports:
+      - "7002:7002"
+    environment:
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    volumes:
+      - ./eudi_issuer/backend/waltid-config/issuer:/waltid-issuer-api/config
+    mem_limit: 600m
+
+  waltid-wallet:
+    image: waltid/wallet-api:latest
+    pull_policy: missing
+    restart: unless-stopped
+    ports:
+      - "7001:7001"
+    environment:
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    volumes:
+      - wallet-data:/waltid-wallet-api/data
+      - ./waltid-wallet-config:/waltid-wallet-api/config
+    mem_limit: 600m
+
+  face-service:
+    build: ./face_service
+    restart: unless-stopped
+    ports:
+      - "5010:5010"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5010/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  backend:
+    build: ./eudi_issuer/backend
+    restart: unless-stopped
+    depends_on:
+      waltid-issuer:
+        condition: service_started
+      face-service:
+        condition: service_healthy
+    environment:
+      FACE_SERVICE_URL: "http://face-service:5010"
+      PORT: "4000"
+      JWT_SECRET: "${JWT_SECRET:-bread_demo_secret_2024}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@eudi.demo}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-Admin1234!}"
+      WALTID_ISSUER_URL: "http://waltid-issuer:7002"
+      WALTID_PUBLIC_URL: "http://waltid-issuer:7002"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      EMAIL_FROM: "${EMAIL_FROM:-}"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost}"
+    volumes:
+      - issuer-data:/data
+      - issuer-uploads:/app/uploads
+
+  frontend:
+    build: ./eudi_issuer/frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+  waltid-verifier:
+    image: waltid/verifier-api:latest
+    pull_policy: missing
+    restart: unless-stopped
+    ports:
+      - "7003:7003"
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx256m"
+    volumes:
+      - ./eudi_verifier/waltid-config/verifier:/waltid-verifier-api/config
+    mem_limit: 400m
+
+  verifier-backend:
+    build: ./eudi_verifier/backend
+    restart: unless-stopped
+    depends_on:
+      waltid-verifier:
+        condition: service_started
+      face-service:
+        condition: service_healthy
+    environment:
+      PORT: "5000"
+      WALTID_VERIFIER_URL: "http://waltid-verifier:7003"
+      PUBLIC_URL: "${PUBLIC_URL:-http://localhost:3000}"
+      FRONTEND_URL: "${PUBLIC_URL:-http://localhost:3000}"
+      FACE_SERVICE_URL: "http://face-service:5010"
+      VERIFIER_ENV: "${VERIFIER_ENV:-local}"
+    ports:
+      - "5000:5000"
+
+  verifier-frontend:
+    build: ./eudi_verifier/frontend
+    restart: unless-stopped
+    depends_on:
+      - verifier-backend
+    ports:
+      - "3000:80"
+
+volumes:
+  issuer-data:
+  issuer-uploads:
+  wallet-data:

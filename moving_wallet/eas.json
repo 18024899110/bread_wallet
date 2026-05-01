@@ -1,0 +1,18 @@
+{
+  "cli": {
+    "version": ">= 10.0.0"
+  },
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_WALTID_WALLET_URL": "http://3.26.11.128:7001",
+        "EXPO_PUBLIC_ISSUER_API_URL": "http://3.26.11.128:4000",
+        "EXPO_PUBLIC_ISSUER_BASE_URL": "http://3.26.11.128",
+        "EXPO_PUBLIC_PROD_HOST": "3.26.11.128"
+      }
+    }
+  }
+}
